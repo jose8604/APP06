@@ -4,31 +4,51 @@
 <meta charset="UTF-8">
 <title>Nuestra App</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
+
 <style>
-body { font-family: Arial; margin:0; background:#f4f4f4; }
-.hidden { display:none; }
-header { background:#222; color:#fff; padding:10px; display:flex; align-items:center; }
-#menuBtn { font-size:22px; cursor:pointer; margin-right:10px; }
-nav { position:fixed; top:0; left:0; width:250px; height:100%; background:#333; color:#fff; padding:20px; transform:translateX(-100%); transition:.3s; }
-nav.open { transform:translateX(0); }
-nav img { width:80px; height:80px; border-radius:50%; }
-section { padding:15px; }
-.card { background:#fff; padding:10px; margin-bottom:10px; border-radius:8px; }
-button { padding:6px 10px; }
-input { width:100%; padding:6px; margin:4px 0; }
-.menu { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; }
-.menu div { background:#fff; padding:20px; text-align:center; border-radius:10px; cursor:pointer; }
+body{margin:0;font-family:Arial;background:#f2f2f2}
+.hidden{display:none}
+header{background:#111;color:#fff;padding:10px;display:flex;align-items:center}
+#menuBtn{font-size:22px;cursor:pointer}
+nav{
+position:fixed;top:0;left:0;width:260px;height:100%;
+background:#222;color:#fff;padding:15px;
+transform:translateX(-100%);transition:.3s;z-index:10
+}
+nav.open{transform:translateX(0)}
+#overlay{
+position:fixed;top:0;left:0;width:100%;height:100%;
+background:rgba(0,0,0,.4);display:none;z-index:5
+}
+nav img{width:80px;height:80px;border-radius:50%}
+section{padding:15px}
+.menu{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.menu div{background:#fff;padding:20px;border-radius:10px;text-align:center;cursor:pointer}
+.card{background:#fff;padding:10px;margin:8px 0;border-radius:8px}
+input,textarea{width:100%;padding:6px;margin:4px 0}
+button{padding:6px 10px;margin-top:5px}
+.userBox{display:flex;align-items:center;gap:10px}
+.userBox img{width:50px;height:50px;border-radius:50%}
+.circle{
+width:60px;height:60px;border-radius:50%;
+background:conic-gradient(#4caf50 0deg, #ddd 0deg);
+display:flex;align-items:center;justify-content:center;
+font-size:12px
+}
 </style>
 </head>
 
 <body>
 
+<div id="overlay" onclick="closeMenu()"></div>
+
 <!-- LOGIN -->
 <section id="loginScreen">
-<h2>Entrar</h2>
+<h2>Registro / Inicio</h2>
 <input id="email" placeholder="Email">
-<input id="pass" type="password" placeholder="Contraseña">
-<input id="name" placeholder="Nombre (opcional)">
+<input id="pass" type="password" placeholder="Contraseña (6+)">
+<input id="name" placeholder="Nombre">
+<input type="file" id="photo">
 <button onclick="login()">Entrar / Registrarse</button>
 </section>
 
@@ -36,22 +56,23 @@ input { width:100%; padding:6px; margin:4px 0; }
 <div id="app" class="hidden">
 
 <header>
-<span id="menuBtn" onclick="toggleMenu()">☰</span>
-<h3>Nosotros</h3>
+<span id="menuBtn" onclick="openMenu()">☰</span>
+<h3 style="margin-left:10px">Nuestra App</h3>
 </header>
 
 <nav id="sideMenu">
+<button onclick="closeMenu()">Cerrar ✖</button>
 <img id="profilePic">
 <p id="profileName"></p>
-<input type="file" onchange="uploadPhoto(event)">
+<input type="file" onchange="updatePhoto(event)">
 <button onclick="logout()">Salir</button>
 </nav>
 
 <section class="menu">
-<div onclick="openSection('objetivos')">🎯 Objetivos</div>
-<div onclick="openSection('planes')">📅 Planes</div>
-<div onclick="openSection('restaurantes')">🍽️ Restaurantes</div>
-<div onclick="openSection('sitios')">📍 Sitios</div>
+<div onclick="openObjetivos()">🎯 Objetivos</div>
+<div onclick="openList('planes')">📅 Planes</div>
+<div onclick="openList('restaurantes')">🍽️ Restaurantes</div>
+<div onclick="openList('sitios')">📍 Sitios</div>
 </section>
 
 <section id="content"></section>
@@ -75,92 +96,149 @@ const firebaseConfig = {
 };
 
 firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
-const db = firebase.firestore();
-const storage = firebase.storage();
-
+const auth=firebase.auth();
+const db=firebase.firestore();
+const storage=firebase.storage();
 let user;
 
 // LOGIN
 function login(){
-auth.signInWithEmailAndPassword(email.value, pass.value)
+auth.signInWithEmailAndPassword(email.value,pass.value)
 .catch(()=>{
-auth.createUserWithEmailAndPassword(email.value, pass.value)
+auth.createUserWithEmailAndPassword(email.value,pass.value)
 .then(r=>{
-db.collection("users").doc(r.user.uid).set({
-name:name.value,
-photo:""
-});
+let file=photo.files[0];
+let ref=storage.ref("profiles/"+r.user.uid);
+if(file){
+ref.put(file).then(()=>ref.getDownloadURL().then(url=>{
+db.collection("users").doc(r.user.uid).set({name:name.value,photo:url});
+}));
+}else{
+db.collection("users").doc(r.user.uid).set({name:name.value,photo:""});
+}
 });
 });
 }
 
 auth.onAuthStateChanged(u=>{
 if(u){
-  user = u;
-  loginScreen.style.display = "none";
-  app.classList.remove("hidden");
-  loadProfile();
+user=u;
+loginScreen.classList.add("hidden");
+app.classList.remove("hidden");
+loadProfile();
 }else{
-  loginScreen.style.display = "block";
-  app.classList.add("hidden");
+loginScreen.classList.remove("hidden");
+app.classList.add("hidden");
 }
 });
 
 // PERFIL
 function loadProfile(){
 db.collection("users").doc(user.uid).onSnapshot(d=>{
-profileName.innerText=d.data().name || "Sin nombre";
-profilePic.src=d.data().photo || "https://via.placeholder.com/80";
+profileName.innerText=d.data().name;
+profilePic.src=d.data().photo||"https://via.placeholder.com/80";
 });
 }
-
-function uploadPhoto(e){
+function updatePhoto(e){
 let file=e.target.files[0];
-let ref=storage.ref("photos/"+user.uid);
-ref.put(file).then(()=>{
-ref.getDownloadURL().then(url=>{
+let ref=storage.ref("profiles/"+user.uid);
+ref.put(file).then(()=>ref.getDownloadURL().then(url=>{
 db.collection("users").doc(user.uid).update({photo:url});
-});
-});
+}));
 }
 
 // MENU
-function toggleMenu(){ sideMenu.classList.toggle("open"); }
-function logout(){ auth.signOut(); }
+function openMenu(){sideMenu.classList.add("open");overlay.style.display="block";}
+function closeMenu(){sideMenu.classList.remove("open");overlay.style.display="none";}
+function logout(){auth.signOut();}
 
-// SECCIONES
-function openSection(type){
+// OBJETIVOS
+function openObjetivos(){
+content.innerHTML="<h3>Objetivos del año</h3><div id='users'></div>";
+db.collection("users").onSnapshot(us=>{
+users.innerHTML="";
+us.forEach(u=>{
+let uid=u.id;
+let data=u.data();
+let box=document.createElement("div");
+box.className="card";
+box.innerHTML=`
+<div class="userBox">
+<img src="${data.photo||'https://via.placeholder.com/50'}">
+<b>${data.name}</b>
+<div class="circle" id="c_${uid}">0%</div>
+</div>
+<input placeholder="Nuevo objetivo" id="o_${uid}">
+<button onclick="addObj('${uid}')">Añadir</button>
+<div id="l_${uid}"></div>
+`;
+users.appendChild(box);
+
+db.collection("objetivos").where("uid","==",uid).onSnapshot(s=>{
+let total=0,done=0;
+let list=document.getElementById("l_"+uid);
+list.innerHTML="";
+s.forEach(d=>{
+let o=d.data();total++;if(o.done)done++;
+list.innerHTML+=`
+<div>
+<input type="checkbox" ${o.done?"checked":""}
+onclick="toggleObj('${d.id}',${!o.done})">
+${o.text}
+</div>`;
+});
+let pct=total?Math.round(done/total*100):0;
+document.getElementById("c_"+uid).style.background=
+`conic-gradient(#4caf50 ${pct*3.6}deg,#ddd 0deg)`;
+document.getElementById("c_"+uid).innerText=pct+"%";
+});
+});
+});
+}
+function addObj(uid){
+let i=document.getElementById("o_"+uid);
+db.collection("objetivos").add({uid,text:i.value,done:false});
+i.value="";
+}
+function toggleObj(id,val){db.collection("objetivos").doc(id).update({done:val});}
+
+// LISTAS
+function openList(type){
 content.innerHTML=`
 <h3>${type}</h3>
-<input id="newItem" placeholder="Añadir">
+<textarea id="txt" placeholder="Texto o enlace"></textarea>
+<input type="file" id="img">
 <button onclick="addItem('${type}')">Añadir</button>
 <div id="list"></div>`;
 db.collection(type).onSnapshot(s=>{
 list.innerHTML="";
 s.forEach(d=>{
-let c=d.data();
+let i=d.data();
 list.innerHTML+=`
 <div class="card">
-<input type="checkbox" ${c.done?"checked":""}
-onclick="toggle('${type}','${d.id}',${!c.done})">
-${c.text}
-<button onclick="del('${type}','${d.id}')">❌</button>
+${i.text||""}<br>
+${i.img?`<img src="${i.img}" style="width:100%">`:""}
+<br>
+<input type="checkbox" ${i.done?"checked":""}
+onclick="toggle('${type}','${d.id}',${!i.done})">
+<a href="https://calendar.google.com" target="_blank">📅</a>
 </div>`;
 });
 });
 }
-
 function addItem(type){
-db.collection(type).add({text:newItem.value,done:false});
-newItem.value="";
+let file=img.files[0];
+if(file){
+let ref=storage.ref(type+"/"+Date.now());
+ref.put(file).then(()=>ref.getDownloadURL().then(url=>{
+db.collection(type).add({text:txt.value,img:url,done:false});
+}));
+}else{
+db.collection(type).add({text:txt.value,done:false});
 }
-function toggle(type,id,val){
-db.collection(type).doc(id).update({done:val});
+txt.value="";img.value="";
 }
-function del(type,id){
-db.collection(type).doc(id).delete();
-}
+function toggle(type,id,val){db.collection(type).doc(id).update({done:val});}
 </script>
 
 </body>
