@@ -24,7 +24,7 @@ input { width:100%; padding:6px; margin:4px 0; }
 <body>
 
 <!-- LOGIN -->
-<section id="login">
+<section id="loginScreen">
 <h2>Entrar</h2>
 <input id="email" placeholder="Email">
 <input id="pass" type="password" placeholder="Contraseña">
@@ -97,13 +97,13 @@ photo:""
 
 auth.onAuthStateChanged(u=>{
 if(u){
-user=u;
-login.style.display="none";
-app.classList.remove("hidden");
-loadProfile();
+  user = u;
+  loginScreen.style.display = "none";
+  app.classList.remove("hidden");
+  loadProfile();
 }else{
-login.style.display="block";
-app.classList.add("hidden");
+  loginScreen.style.display = "block";
+  app.classList.add("hidden");
 }
 });
 
