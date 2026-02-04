@@ -43,6 +43,12 @@ font-size:12px
 }
 /* LOGIN DISEÑO */
 #loginScreen{
+  position:fixed;
+  top:0;
+  left:0;
+  width:100%;
+  z-index:100;
+}
   min-height:100vh;
   display:flex;
   flex-direction:column;
@@ -80,6 +86,9 @@ font-size:12px
   color:#333;
   font-size:15px;
   cursor:pointer;
+}
+body.login-active{
+  overflow:hidden;
 }
 
 </style>
@@ -255,7 +264,7 @@ function openList(type){
 content.innerHTML=`
 <h3>${type}</h3>
 <textarea id="txt" placeholder="Texto o enlace"></textarea>
-<input type="file" id="photo" accept="image/*">
+<input type="file" id="img" accept="image/*">
 <button onclick="addItem('${type}')">Añadir</button>
 <div id="list"></div>`;
 db.collection(type).onSnapshot(s=>{
