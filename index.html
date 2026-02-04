@@ -4,9 +4,15 @@
 <meta charset="UTF-8">
 <title>Nuestra App</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600&display=swap" rel="stylesheet">
+
 
 <style>
-body{margin:0;font-family:Arial;background:#f2f2f2}
+body{
+  margin:0;
+  font-family:'Quicksand', sans-serif;
+  background:#f2f2f2;
+}
 .hidden{display:none}
 header{background:#111;color:#fff;padding:10px;display:flex;align-items:center}
 #menuBtn{font-size:22px;cursor:pointer}
@@ -35,6 +41,47 @@ background:conic-gradient(#4caf50 0deg, #ddd 0deg);
 display:flex;align-items:center;justify-content:center;
 font-size:12px
 }
+/* LOGIN DISEÑO */
+#loginScreen{
+  min-height:100vh;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:center;
+  background:
+    radial-gradient(circle at 20% 20%, #f7e8d5 0%, transparent 40%),
+    radial-gradient(circle at 80% 30%, #f3dcc2 0%, transparent 45%),
+    radial-gradient(circle at 50% 80%, #f8efe4 0%, transparent 50%),
+    #f6eadb;
+}
+
+#loginScreen h2{
+  margin-bottom:20px;
+  font-weight:600;
+  font-size:26px;
+}
+
+#loginScreen input{
+  width:260px;
+  max-width:80%;
+  border:none;
+  border-radius:20px;
+  padding:10px 14px;
+  margin:6px 0;
+  font-size:14px;
+}
+
+#loginScreen button{
+  margin-top:15px;
+  padding:10px 30px;
+  border:none;
+  border-radius:25px;
+  background:#d8bfa3;
+  color:#333;
+  font-size:15px;
+  cursor:pointer;
+}
+
 </style>
 </head>
 
@@ -44,7 +91,7 @@ font-size:12px
 
 <!-- LOGIN -->
 <section id="loginScreen">
-<h2>Registro / Inicio</h2>
+<h2>Bienvenido/a 💛</h2>
 <input id="email" placeholder="Email">
 <input id="pass" type="password" placeholder="Contraseña (6+)">
 <input id="name" placeholder="Nombre">
@@ -112,6 +159,7 @@ let ref=storage.ref("profiles/"+r.user.uid);
 if(file){
 ref.put(file).then(()=>ref.getDownloadURL().then(url=>{
 db.collection("users").doc(r.user.uid).set({name:name.value,photo:url});
+profilePic.src = url;
 }));
 }else{
 db.collection("users").doc(r.user.uid).set({name:name.value,photo:""});
@@ -207,7 +255,7 @@ function openList(type){
 content.innerHTML=`
 <h3>${type}</h3>
 <textarea id="txt" placeholder="Texto o enlace"></textarea>
-<input type="file" id="img">
+<input type="file" id="photo" accept="image/*">
 <button onclick="addItem('${type}')">Añadir</button>
 <div id="list"></div>`;
 db.collection(type).onSnapshot(s=>{
