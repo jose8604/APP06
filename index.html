@@ -214,15 +214,15 @@ db.collection("users").doc(r.user.uid).set({name:name.value,photo:""});
 }
 
 auth.onAuthStateChanged(u=>{
-if(u){
-user=u;
-loginScreen.classList.add("hidden");
-app.classList.remove("hidden");
-loadProfile();
-}else{
-loginScreen.classList.remove("hidden");
-app.classList.add("hidden");
-}
+  if(u){
+    user = u;
+    loginScreen.style.display = "none";
+    app.classList.remove("hidden");
+    loadProfile();
+  }else{
+    loginScreen.style.display = "flex";
+    app.classList.add("hidden");
+  }
 });
 
 // PERFIL
