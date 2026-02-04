@@ -47,7 +47,17 @@ font-size:12px
   top:0;
   left:0;
   width:100%;
+  min-height:100vh;
   z-index:100;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:center;
+  background:
+    radial-gradient(circle at 20% 20%, #f7e8d5 0%, transparent 40%),
+    radial-gradient(circle at 80% 30%, #f3dcc2 0%, transparent 45%),
+    radial-gradient(circle at 50% 80%, #f8efe4 0%, transparent 50%),
+    #f6eadb;
 }
   min-height:100vh;
   display:flex;
@@ -90,6 +100,34 @@ font-size:12px
 body.login-active{
   overflow:hidden;
 }
+#loginScreen form{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+}
+#photo{
+  display:none;
+}
+.photoPicker{
+  width:80px;
+  height:80px;
+  border-radius:50%;
+  background:#d8bfa3;
+  color:#333;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:36px;
+  cursor:pointer;
+  margin:10px 0;
+  overflow:hidden;
+}
+
+.photoPicker img{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+}
 
 </style>
 </head>
@@ -101,11 +139,19 @@ body.login-active{
 <!-- LOGIN -->
 <section id="loginScreen">
 <h2>Bienvenido/a 💛</h2>
-<input id="email" placeholder="Email">
-<input id="pass" type="password" placeholder="Contraseña (6+)">
-<input id="name" placeholder="Nombre">
-<input type="file" id="photo">
-<button onclick="login()">Entrar / Registrarse</button>
+<form onsubmit="event.preventDefault(); login();">
+  <input id="email" placeholder="Email">
+  <input id="pass" type="password" placeholder="Contraseña (6+)">
+  <input id="name" placeholder="Nombre">
+
+<label class="photoPicker">
+  <span id="photoPlus">+</span>
+  <img id="photoPreview" class="hidden">
+  <input type="file" id="photo" accept="image/*" onchange="previewPhoto(event)">
+</label>
+
+  <button onclick="login()">Entrar / Registrarse</button>
+</form>
 </section>
 
 <!-- APP -->
@@ -296,6 +342,19 @@ db.collection(type).add({text:txt.value,done:false});
 txt.value="";img.value="";
 }
 function toggle(type,id,val){db.collection(type).doc(id).update({done:val});}
+function previewPhoto(e){
+  const file = e.target.files[0];
+  if(!file) return;
+
+  const reader = new FileReader();
+  reader.onload = () => {
+    photoPreview.src = reader.result;
+    photoPreview.classList.remove("hidden");
+    photoPlus.classList.add("hidden");
+  };
+  reader.readAsDataURL(file);
+}
+
 </script>
 
 </body>
