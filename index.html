@@ -140,7 +140,7 @@ body.login-active{
   <input type="file" id="photo" accept="image/*" onchange="previewPhoto(event)">
 </label>
 
- <button type="submit">Entrar / Registrarse</button>
+  <button onclick="login()">Entrar / Registrarse</button>
 </form>
 </section>
 
@@ -195,41 +195,22 @@ let user;
 
 // LOGIN
 function login(){
-  auth.signInWithEmailAndPassword(email.value, pass.value)
-    .catch(error => {
-
-      if (error.code === "auth/user-not-found") {
-
-        auth.createUserWithEmailAndPassword(email.value, pass.value)
-          .then(result => {
-
-            let file = photo.files[0];
-            let ref = storage.ref("profiles/" + result.user.uid);
-
-            if (file) {
-              ref.put(file).then(() => {
-                ref.getDownloadURL().then(url => {
-                  db.collection("users").doc(result.user.uid).set({
-                    name: name.value,
-                    photo: url
-                  });
-                });
-              });
-            } else {
-              db.collection("users").doc(result.user.uid).set({
-                name: name.value,
-                photo: ""
-              });
-            }
-
-          })
-          .catch(err => alert(err.message));
-
-      } else {
-        alert(error.message);
-      }
-
-    });
+auth.signInWithEmailAndPassword(email.value,pass.value)
+.catch(()=>{
+auth.createUserWithEmailAndPassword(email.value,pass.value)
+.then(r=>{
+let file=photo.files[0];
+let ref=storage.ref("profiles/"+r.user.uid);
+if(file){
+ref.put(file).then(()=>ref.getDownloadURL().then(url=>{
+db.collection("users").doc(r.user.uid).set({name:name.value,photo:url});
+profilePic.src = url;
+}));
+}else{
+db.collection("users").doc(r.user.uid).set({name:name.value,photo:""});
+}
+});
+});
 }
 
 auth.onAuthStateChanged(u=>{
