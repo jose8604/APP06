@@ -119,6 +119,33 @@ body.login-active{
   object-fit:cover;
 }
 
+.headerPhotoPicker{
+  width:40px;
+  height:40px;
+  border-radius:50%;
+  background:#d8bfa3;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  cursor:pointer;
+  overflow:hidden;
+  margin-left:10px;
+}
+
+.headerPhotoPicker input{
+  display:none;
+}
+
+.headerPhotoPicker img{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+}
+
+#headerPlus{
+  font-size:22px;
+  color:#333;
+}
 </style>
 </head>
 
@@ -148,8 +175,15 @@ body.login-active{
 <div id="app" class="hidden">
 
 <header>
-<span id="menuBtn" onclick="openMenu()">☰</span>
-<h3 style="margin-left:10px">Nuestra App</h3>
+  <span id="menuBtn" onclick="openMenu()">☰</span>
+
+  <label class="headerPhotoPicker">
+    <img id="headerPhoto" class="hidden">
+    <span id="headerPlus">+</span>
+    <input type="file" accept="image/*" onchange="updatePhoto(event)">
+  </label>
+
+  <h3 style="margin-left:10px">Nuestra App</h3>
 </header>
 
 <nav id="sideMenu">
@@ -230,6 +264,13 @@ function loadProfile(){
 db.collection("users").doc(user.uid).onSnapshot(d=>{
 profileName.innerText=d.data().name;
 profilePic.src=d.data().photo||"https://via.placeholder.com/80";
+
+// FOTO HEADER
+if(d.data().photo){
+  headerPhotoPreview.src = d.data().photo;
+  headerPhotoPreview.classList.remove("hidden");
+  headerPlus.classList.add("hidden");
+}
 });
 }
 function updatePhoto(e){
@@ -246,8 +287,20 @@ function closeMenu(){sideMenu.classList.remove("open");overlay.style.display="no
 function logout(){auth.signOut();}
 
 // OBJETIVOS
+function goBack(){
+  content.innerHTML = "";
+  document.querySelector(".menu").classList.remove("hidden");
+}
+
 function openObjetivos(){
-content.innerHTML="<h3>Objetivos del año</h3><div id='users'></div>";
+document.querySelector(".menu").classList.add("hidden");
+
+content.innerHTML = `
+  <button onclick="goBack()">⬅ Volver</button>
+  <h3>Objetivos del año</h3>
+  <div id="users"></div>
+`;
+
 db.collection("users").onSnapshot(us=>{
 users.innerHTML="";
 us.forEach(u=>{
@@ -297,28 +350,35 @@ function toggleObj(id,val){db.collection("objetivos").doc(id).update({done:val})
 
 // LISTAS
 function openList(type){
-content.innerHTML=`
-<h3>${type}</h3>
-<textarea id="txt" placeholder="Texto o enlace"></textarea>
-<input type="file" id="img" accept="image/*">
-<button onclick="addItem('${type}')">Añadir</button>
-<div id="list"></div>`;
-db.collection(type).onSnapshot(s=>{
-list.innerHTML="";
-s.forEach(d=>{
-let i=d.data();
-list.innerHTML+=`
-<div class="card">
-${i.text||""}<br>
-${i.img?`<img src="${i.img}" style="width:100%">`:""}
-<br>
-<input type="checkbox" ${i.done?"checked":""}
-onclick="toggle('${type}','${d.id}',${!i.done})">
-<a href="https://calendar.google.com" target="_blank">📅</a>
-</div>`;
-});
-});
+  document.querySelector(".menu").classList.add("hidden");
+
+  content.innerHTML = `
+    <button onclick="goBack()">⬅ Volver</button>
+    <h3>${type}</h3>
+    <textarea id="txt" placeholder="Texto o enlace"></textarea>
+    <input type="file" id="img" accept="image/*">
+    <button onclick="addItem('${type}')">Añadir</button>
+    <div id="list"></div>
+  `;
+
+  db.collection(type).onSnapshot(s=>{
+    list.innerHTML="";
+    s.forEach(d=>{
+      let i=d.data();
+      list.innerHTML+=`
+        <div class="card">
+          ${i.text||""}<br>
+          ${i.img ? `<img src="${i.img}" style="width:100%">` : ""}
+          <br>
+          <input type="checkbox" ${i.done?"checked":""}
+          onclick="toggle('${type}','${d.id}',${!i.done})">
+          <a href="https://calendar.google.com" target="_blank">📅</a>
+        </div>
+      `;
+    });
+  });
 }
+
 function addItem(type){
 let file=img.files[0];
 if(file){
@@ -343,6 +403,11 @@ function previewPhoto(e){
     photoPlus.classList.add("hidden");
   };
   reader.readAsDataURL(file);
+}
+
+function goBack(){
+  content.innerHTML="";
+  document.querySelector(".menu").classList.remove("hidden");
 }
 
 </script>
