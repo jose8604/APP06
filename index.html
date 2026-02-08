@@ -267,8 +267,8 @@ profilePic.src=d.data().photo||"https://via.placeholder.com/80";
 
 // FOTO HEADER
 if(d.data().photo){
-  headerPhotoPreview.src = d.data().photo;
-  headerPhotoPreview.classList.remove("hidden");
+  headerPhoto.src = d.data().photo;
+  headerPhoto.classList.remove("hidden");
   headerPlus.classList.add("hidden");
 }
 });
@@ -389,7 +389,8 @@ db.collection(type).add({text:txt.value,img:url,done:false});
 }else{
 db.collection(type).add({text:txt.value,done:false});
 }
-txt.value="";img.value="";
+document.getElementById("txt").value = "";
+document.getElementById("img").value = "";
 }
 function toggle(type,id,val){db.collection(type).doc(id).update({done:val});}
 function previewPhoto(e){
@@ -405,10 +406,6 @@ function previewPhoto(e){
   reader.readAsDataURL(file);
 }
 
-function goBack(){
-  content.innerHTML="";
-  document.querySelector(".menu").classList.remove("hidden");
-}
 
 </script>
 
