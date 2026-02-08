@@ -380,7 +380,7 @@ function openList(type){
 }
 
 function addItem(type){
-let file=img.files[0];
+let file = document.getElementById("img").files[0];
 if(file){
 let ref=storage.ref(type+"/"+Date.now());
 ref.put(file).then(()=>ref.getDownloadURL().then(url=>{
