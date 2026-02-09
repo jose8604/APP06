@@ -216,7 +216,7 @@ const firebaseConfig = {
   apiKey: "AIzaSyA-RGOYwDqQ5zwAiTHElbSOAgOUKr1AYAM",
   authDomain: "app-8e3d0.firebaseapp.com",
   projectId: "app-8e3d0",
-  storageBucket: "app-8e3d0.firebasestorage.app",
+  storageBucket: "app-8e3d0.appspot.com",
   messagingSenderId: "1013704877946",
   appId: "1:1013704877946:web:3b6f409f7fa1cc3f0058c3"
 };
@@ -229,22 +229,30 @@ let user;
 
 // LOGIN
 function login(){
-auth.signInWithEmailAndPassword(email.value,pass.value)
-.catch(()=>{
-auth.createUserWithEmailAndPassword(email.value,pass.value)
-.then(r=>{
-let file=photo.files[0];
-let ref=storage.ref("profiles/"+r.user.uid);
-if(file){
-ref.put(file).then(()=>ref.getDownloadURL().then(url=>{
-db.collection("users").doc(r.user.uid).set({name:name.value,photo:url});
-profilePic.src = url;
-}));
-}else{
-db.collection("users").doc(r.user.uid).set({name:name.value,photo:""});
-}
-});
-});
+  auth.signInWithEmailAndPassword(email.value, pass.value)
+  .catch(() => {
+    auth.createUserWithEmailAndPassword(email.value, pass.value)
+    .then(r => {
+      const uid = r.user.uid;
+
+      db.collection("users").doc(uid).set({
+        name: name.value,
+        photo: ""
+      }).then(() => {
+
+        const file = photo.files[0];
+        if(!file) return;
+
+        const ref = storage.ref("profiles/" + uid);
+        ref.put(file).then(() =>
+          ref.getDownloadURL().then(url => {
+            db.collection("users").doc(uid).update({ photo: url });
+          })
+        );
+
+      });
+    });
+  });
 }
 
 auth.onAuthStateChanged(u=>{
@@ -261,9 +269,20 @@ auth.onAuthStateChanged(u=>{
 
 // PERFIL
 function loadProfile(){
-db.collection("users").doc(user.uid).onSnapshot(d=>{
-profileName.innerText=d.data().name;
-profilePic.src=d.data().photo||"https://via.placeholder.com/80";
+  db.collection("users").doc(user.uid).onSnapshot(d=>{
+    if(!d.exists) return;
+
+    const data = d.data();
+    profileName.innerText = data.name;
+    profilePic.src = data.photo || "https://via.placeholder.com/80";
+
+    if(data.photo){
+      headerPhoto.src = data.photo;
+      headerPhoto.classList.remove("hidden");
+      headerPlus.classList.add("hidden");
+    }
+  });
+}
 
 // FOTO HEADER
 if(d.data().photo){
@@ -274,11 +293,15 @@ if(d.data().photo){
 });
 }
 function updatePhoto(e){
-let file=e.target.files[0];
-let ref=storage.ref("profiles/"+user.uid);
-ref.put(file).then(()=>ref.getDownloadURL().then(url=>{
-db.collection("users").doc(user.uid).update({photo:url});
-}));
+  const file = e.target.files[0];
+  if(!file) return;
+
+  const ref = storage.ref("profiles/" + user.uid);
+  ref.put(file).then(() =>
+    ref.getDownloadURL().then(url => {
+      db.collection("users").doc(user.uid).update({ photo: url });
+    })
+  );
 }
 
 // MENU
@@ -288,13 +311,15 @@ function logout(){auth.signOut();}
 
 // OBJETIVOS
 function openObjetivos(){
-document.querySelector(".menu").classList.add("hidden");
+  enterSection();
 
-content.innerHTML = `
-  <button onclick="goBack()">⬅ Volver</button>
-  <h3>Objetivos del año</h3>
-  <div id="users"></div>
-`;
+  content.innerHTML = `
+    <button onclick="goBack()">⬅ Volver</button>
+    <h3>Objetivos del año</h3>
+    <div id="users"></div>
+  `;
+  ...
+}
 
 db.collection("users").onSnapshot(us=>{
 users.innerHTML="";
@@ -345,16 +370,17 @@ function toggleObj(id,val){db.collection("objetivos").doc(id).update({done:val})
 
 // LISTAS
 function openList(type){
- enterSection();
+  enterSection();
 
   content.innerHTML = `
     <button onclick="goBack()">⬅ Volver</button>
     <h3>${type}</h3>
-    <textarea id="txt" placeholder="Texto o enlace"></textarea>
-    <input type="file" id="img" accept="image/*">
+    <textarea id="txt"></textarea>
+    <input type="file" id="img">
     <button onclick="addItem('${type}')">Añadir</button>
     <div id="list"></div>
   `;
+}
 
 const list = document.getElementById("list");
 
@@ -405,13 +431,15 @@ function previewPhoto(e){
 
 function enterSection(){
   document.querySelector(".menu").classList.add("hidden");
-  document.querySelector("header").classList.add("hidden");
 }
 
 function exitSection(){
   document.querySelector(".menu").classList.remove("hidden");
-  document.querySelector("header").classList.remove("hidden");
   content.innerHTML = "";
+}
+
+function goBack(){
+  exitSection();
 }
 
 </script>
