@@ -287,11 +287,6 @@ function closeMenu(){sideMenu.classList.remove("open");overlay.style.display="no
 function logout(){auth.signOut();}
 
 // OBJETIVOS
-function goBack(){
-  content.innerHTML = "";
-  document.querySelector(".menu").classList.remove("hidden");
-}
-
 function openObjetivos(){
 document.querySelector(".menu").classList.add("hidden");
 
@@ -350,7 +345,7 @@ function toggleObj(id,val){db.collection("objetivos").doc(id).update({done:val})
 
 // LISTAS
 function openList(type){
-  document.querySelector(".menu").classList.add("hidden");
+ enterSection();
 
   content.innerHTML = `
     <button onclick="goBack()">⬅ Volver</button>
@@ -360,6 +355,8 @@ function openList(type){
     <button onclick="addItem('${type}')">Añadir</button>
     <div id="list"></div>
   `;
+
+const list = document.getElementById("list");
 
   db.collection(type).onSnapshot(s=>{
     list.innerHTML="";
@@ -406,6 +403,16 @@ function previewPhoto(e){
   reader.readAsDataURL(file);
 }
 
+function enterSection(){
+  document.querySelector(".menu").classList.add("hidden");
+  document.querySelector("header").classList.add("hidden");
+}
+
+function exitSection(){
+  document.querySelector(".menu").classList.remove("hidden");
+  document.querySelector("header").classList.remove("hidden");
+  content.innerHTML = "";
+}
 
 </script>
 
