@@ -212,47 +212,36 @@ body.login-active{
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
 
 <script>
-const firebaseConfig = {
-  apiKey: "AIzaSyA-RGOYwDqQ5zwAiTHElbSOAgOUKr1AYAM",
-  authDomain: "app-8e3d0.firebaseapp.com",
-  projectId: "app-8e3d0",
-  storageBucket: "app-8e3d0.appspot.com",
-  messagingSenderId: "1013704877946",
-  appId: "1:1013704877946:web:3b6f409f7fa1cc3f0058c3"
-};
-
+/* ================= FIREBASE ================= */
 firebase.initializeApp(firebaseConfig);
-const auth=firebase.auth();
-const db=firebase.firestore();
-const storage=firebase.storage();
-let user;
+const auth = firebase.auth();
+const db = firebase.firestore();
+const storage = firebase.storage();
+let user = null;
 
-// LOGIN
+/* ================= LOGIN ================= */
 function login(){
+  if(!email.value || !pass.value) return alert("Email y contraseña obligatorios");
+
   auth.signInWithEmailAndPassword(email.value, pass.value)
-  .catch(() => {
-    auth.createUserWithEmailAndPassword(email.value, pass.value)
-    .then(r => {
-      const uid = r.user.uid;
+    .catch(() => {
+      auth.createUserWithEmailAndPassword(email.value, pass.value)
+        .then(r => {
+          const uid = r.user.uid;
 
-      db.collection("users").doc(uid).set({
-        name: name.value,
-        photo: ""
-      }).then(() => {
+          return db.collection("users").doc(uid).set({
+            name: name.value || "Sin nombre",
+            photo: ""
+          }).then(() => {
+            if(!photo.files[0]) return;
 
-        const file = photo.files[0];
-        if(!file) return;
-
-        const ref = storage.ref("profiles/" + uid);
-        ref.put(file).then(() =>
-          ref.getDownloadURL().then(url => {
-            db.collection("users").doc(uid).update({ photo: url });
-          })
-        );
-
-      });
+            const ref = storage.ref("profiles/" + uid);
+            return ref.put(photo.files[0])
+              .then(() => ref.getDownloadURL())
+              .then(url => db.collection("users").doc(uid).update({ photo: url }));
+          });
+        });
     });
-  });
 }
 
 auth.onAuthStateChanged(u=>{
@@ -267,12 +256,12 @@ auth.onAuthStateChanged(u=>{
   }
 });
 
-// PERFIL
+/* ================= PERFIL ================= */
 function loadProfile(){
   db.collection("users").doc(user.uid).onSnapshot(d=>{
     if(!d.exists) return;
-
     const data = d.data();
+
     profileName.innerText = data.name;
     profilePic.src = data.photo || "https://via.placeholder.com/80";
 
@@ -284,94 +273,111 @@ function loadProfile(){
   });
 }
 
-// FOTO HEADER
-if(d.data().photo){
-  headerPhoto.src = d.data().photo;
-  headerPhoto.classList.remove("hidden");
-  headerPlus.classList.add("hidden");
-}
-});
-}
 function updatePhoto(e){
   const file = e.target.files[0];
   if(!file) return;
 
   const ref = storage.ref("profiles/" + user.uid);
-  ref.put(file).then(() =>
-    ref.getDownloadURL().then(url => {
-      db.collection("users").doc(user.uid).update({ photo: url });
-    })
-  );
+  ref.put(file)
+    .then(() => ref.getDownloadURL())
+    .then(url => db.collection("users").doc(user.uid).update({ photo: url }));
 }
 
-// MENU
-function openMenu(){sideMenu.classList.add("open");overlay.style.display="block";}
-function closeMenu(){sideMenu.classList.remove("open");overlay.style.display="none";}
-function logout(){auth.signOut();}
+/* ================= MENU ================= */
+function openMenu(){
+  sideMenu.classList.add("open");
+  overlay.style.display = "block";
+}
+function closeMenu(){
+  sideMenu.classList.remove("open");
+  overlay.style.display = "none";
+}
+function logout(){
+  auth.signOut();
+}
 
-// OBJETIVOS
+/* ================= SECCIONES ================= */
+function enterSection(){
+  document.querySelector(".menu").classList.add("hidden");
+}
+function exitSection(){
+  document.querySelector(".menu").classList.remove("hidden");
+  content.innerHTML = "";
+}
+function goBack(){
+  exitSection();
+}
+
+/* ================= OBJETIVOS ================= */
 function openObjetivos(){
   enterSection();
-
   content.innerHTML = `
     <button onclick="goBack()">⬅ Volver</button>
     <h3>Objetivos del año</h3>
     <div id="users"></div>
   `;
-  ...
+
+  db.collection("users").onSnapshot(us=>{
+    const usersDiv = document.getElementById("users");
+    usersDiv.innerHTML = "";
+
+    us.forEach(u=>{
+      const uid = u.id;
+      const data = u.data();
+
+      const box = document.createElement("div");
+      box.className = "card";
+      box.innerHTML = `
+        <div class="userBox">
+          <img src="${data.photo || 'https://via.placeholder.com/50'}">
+          <b>${data.name}</b>
+          <div class="circle" id="c_${uid}">0%</div>
+        </div>
+        <input placeholder="Nuevo objetivo" id="o_${uid}">
+        <button onclick="addObj('${uid}')">Añadir</button>
+        <div id="l_${uid}"></div>
+      `;
+      usersDiv.appendChild(box);
+
+      db.collection("objetivos").where("uid","==",uid).onSnapshot(s=>{
+        let total=0, done=0;
+        const list = document.getElementById("l_"+uid);
+        list.innerHTML="";
+
+        s.forEach(d=>{
+          const o = d.data();
+          total++;
+          if(o.done) done++;
+          list.innerHTML += `
+            <div>
+              <input type="checkbox" ${o.done?"checked":""}
+              onclick="toggleObj('${d.id}',${!o.done})">
+              ${o.text}
+            </div>`;
+        });
+
+        const pct = total ? Math.round(done/total*100) : 0;
+        const c = document.getElementById("c_"+uid);
+        c.innerText = pct+"%";
+        c.style.background = `conic-gradient(#4caf50 ${pct*3.6}deg,#ddd 0deg)`;
+      });
+    });
+  });
 }
 
-db.collection("users").onSnapshot(us=>{
-users.innerHTML="";
-us.forEach(u=>{
-let uid=u.id;
-let data=u.data();
-let box=document.createElement("div");
-box.className="card";
-box.innerHTML=`
-<div class="userBox">
-<img src="${data.photo||'https://via.placeholder.com/50'}">
-<b>${data.name}</b>
-<div class="circle" id="c_${uid}">0%</div>
-</div>
-<input placeholder="Nuevo objetivo" id="o_${uid}">
-<button onclick="addObj('${uid}')">Añadir</button>
-<div id="l_${uid}"></div>
-`;
-users.appendChild(box);
-
-db.collection("objetivos").where("uid","==",uid).onSnapshot(s=>{
-let total=0,done=0;
-let list=document.getElementById("l_"+uid);
-list.innerHTML="";
-s.forEach(d=>{
-let o=d.data();total++;if(o.done)done++;
-list.innerHTML+=`
-<div>
-<input type="checkbox" ${o.done?"checked":""}
-onclick="toggleObj('${d.id}',${!o.done})">
-${o.text}
-</div>`;
-});
-let pct=total?Math.round(done/total*100):0;
-document.getElementById("c_"+uid).style.background=
-`conic-gradient(#4caf50 ${pct*3.6}deg,#ddd 0deg)`;
-document.getElementById("c_"+uid).innerText=pct+"%";
-});
-});
-});
-}
 function addObj(uid){
-let i=document.getElementById("o_"+uid);
-db.collection("objetivos").add({uid,text:i.value,done:false});
-i.value="";
+  const i = document.getElementById("o_"+uid);
+  if(!i.value) return;
+  db.collection("objetivos").add({ uid, text:i.value, done:false });
+  i.value="";
 }
-function toggleObj(id,val){db.collection("objetivos").doc(id).update({done:val});}
+function toggleObj(id,val){
+  db.collection("objetivos").doc(id).update({ done:val });
+}
 
-// LISTAS
+/* ================= LISTAS ================= */
 function openList(type){
   enterSection();
-
   content.innerHTML = `
     <button onclick="goBack()">⬅ Volver</button>
     <h3>${type}</h3>
@@ -380,46 +386,48 @@ function openList(type){
     <button onclick="addItem('${type}')">Añadir</button>
     <div id="list"></div>
   `;
-}
 
-const list = document.getElementById("list");
+  const list = document.getElementById("list");
 
   db.collection(type).onSnapshot(s=>{
     list.innerHTML="";
     s.forEach(d=>{
-      let i=d.data();
-      list.innerHTML+=`
+      const i = d.data();
+      list.innerHTML += `
         <div class="card">
           ${i.text||""}<br>
           ${i.img ? `<img src="${i.img}" style="width:100%">` : ""}
           <br>
           <input type="checkbox" ${i.done?"checked":""}
           onclick="toggle('${type}','${d.id}',${!i.done})">
-          <a href="https://calendar.google.com" target="_blank">📅</a>
-        </div>
-      `;
+        </div>`;
     });
   });
 }
 
 function addItem(type){
-let file = document.getElementById("img").files[0];
-if(file){
-let ref=storage.ref(type+"/"+Date.now());
-ref.put(file).then(()=>ref.getDownloadURL().then(url=>{
-db.collection(type).add({text:txt.value,img:url,done:false});
-}));
-}else{
-db.collection(type).add({text:txt.value,done:false});
+  const txt = document.getElementById("txt");
+  const img = document.getElementById("img");
+
+  if(img.files[0]){
+    const ref = storage.ref(type+"/"+Date.now());
+    ref.put(img.files[0])
+      .then(()=>ref.getDownloadURL())
+      .then(url => db.collection(type).add({ text:txt.value, img:url, done:false }));
+  }else{
+    db.collection(type).add({ text:txt.value, done:false });
+  }
+  txt.value="";
+  img.value="";
 }
-document.getElementById("txt").value = "";
-document.getElementById("img").value = "";
+function toggle(type,id,val){
+  db.collection(type).doc(id).update({ done:val });
 }
-function toggle(type,id,val){db.collection(type).doc(id).update({done:val});}
+
+/* ================= PREVIEW LOGIN FOTO ================= */
 function previewPhoto(e){
   const file = e.target.files[0];
   if(!file) return;
-
   const reader = new FileReader();
   reader.onload = () => {
     photoPreview.src = reader.result;
@@ -428,20 +436,6 @@ function previewPhoto(e){
   };
   reader.readAsDataURL(file);
 }
-
-function enterSection(){
-  document.querySelector(".menu").classList.add("hidden");
-}
-
-function exitSection(){
-  document.querySelector(".menu").classList.remove("hidden");
-  content.innerHTML = "";
-}
-
-function goBack(){
-  exitSection();
-}
-
 </script>
 
 </body>
